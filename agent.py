@@ -26,7 +26,7 @@ class QNet(nn.Module):
 class DQNAgent:
     def __init__(self):
         self.epsilon = 0.1
-        self.gamma = 0.98
+        self.gamma = 0.99
         self.lr = 0.0005
         self.buffer_size = 10000
         self.batch_size = 32
@@ -37,6 +37,7 @@ class DQNAgent:
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet(self.action_space).to(self.device)
         self.target_qnet = QNet(self.action_space).to(self.device)
+        self.sync_qnet()
         self.optimizer = torch.optim.Adam(self.qnet.parameters(), lr=self.lr)
         self.loss_fn = nn.MSELoss()
 
