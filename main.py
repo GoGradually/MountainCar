@@ -5,11 +5,11 @@ import time
 
 start = time.time()
 
-episodes = 500
+episodes = 1000
 sync_interval = 20
 env = gym.make("MountainCar-v0", render_mode="rgb_array")
 reward_histories = []
-for trial in range(20):
+for trial in range(100):
     agent = DQNAgent()
     reward_history = []
     for episode in range(episodes):
