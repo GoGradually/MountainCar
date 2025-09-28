@@ -10,9 +10,9 @@ class QNet(nn.Module):
     def __init__(self, action_size):
         super().__init__()
         self.action_size = action_size
-        self.l1 = nn.Linear(2, 128)
-        self.l2 = nn.Linear(128, 128)
-        self.l3 = nn.Linear(128, action_size)
+        self.l1 = nn.Linear(2, 256)
+        self.l2 = nn.Linear(256, 256)
+        self.l3 = nn.Linear(256, action_size)
 
     def forward(self, x):
         if x.dim() == 1:
@@ -25,12 +25,23 @@ class QNet(nn.Module):
 
 class DQNAgent:
     def __init__(self):
-        self.epsilon = 0.1
         self.gamma = 0.99
-        self.lr = 0.0005
+        self.lr = 0.004
         self.buffer_size = 10000
-        self.batch_size = 32
+        self.batch_size = 128
         self.action_space = 3
+        self.n_timesteps = 120_000
+
+
+        self.train_freq = 16              # every 16 env steps, do...
+        self.gradient_steps = 8           # ...8 optimization steps
+
+        self.eps_start = 1.0
+        self.eps_final = 0.07
+        self.exploration_fraction = 0.2
+        self.exploration_steps = int(self.n_timesteps * self.exploration_fraction)
+
+        self.global_step = 0
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
@@ -39,13 +50,28 @@ class DQNAgent:
         self.target_qnet = QNet(self.action_space).to(self.device)
         self.sync_qnet()
         self.optimizer = torch.optim.Adam(self.qnet.parameters(), lr=self.lr)
-        self.loss_fn = nn.MSELoss()
+        self.loss_fn = nn.SmoothL1Loss()
+
+        # target sync
+        self.target_sync_every = 600  # steps
+
+    def epsilon(self):
+        if self.global_step >= self.exploration_steps:
+            return self.eps_final
+        # linear decay
+        frac = self.global_step / max(1, self.exploration_steps)
+        return self.eps_start + (self.eps_final - self.eps_start) * frac
+
+    def preprocess(self, s):
+        # 간단 스케일링
+        return np.array([s[0] / 0.6, s[1] / 0.07], dtype=np.float32)
+
 
     def sync_qnet(self):
         self.target_qnet.load_state_dict(self.qnet.state_dict())
 
     def get_action(self, state):
-        if np.random.rand() < self.epsilon:
+        if np.random.rand() < self.epsilon():
             return np.random.choice(self.action_space)
         with torch.no_grad():
             s = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -53,30 +79,40 @@ class DQNAgent:
             return int(torch.argmax(q_values, dim=1).item())
 
     def update(self, state, action, reward, next_state, done):
+        self.global_step += 1
         self.replay_buffer.add(state, action, reward, next_state, done)
-        if len(self.replay_buffer) < self.batch_size:
+        if len(self.replay_buffer) < 1000:
             return
-        state, action, reward, next_state, done = self.replay_buffer.get_batch()
 
-        s  = torch.as_tensor(state,      dtype=torch.float32, device=self.device)
-        a  = torch.as_tensor(action,     dtype=torch.int64,   device=self.device)
-        r  = torch.as_tensor(reward,     dtype=torch.float32, device=self.device)
-        ns = torch.as_tensor(next_state, dtype=torch.float32, device=self.device)
-        d  = torch.as_tensor(done,       dtype=torch.float32, device=self.device)
+        if self.global_step % self.train_freq != 0:
+            return
 
+        for _ in range(self.gradient_steps):
+            state, action, reward, next_state, done = self.replay_buffer.get_batch()
 
-        qs = self.qnet(s).gather(1, a.unsqueeze(1)).squeeze(1)
-
-        with torch.no_grad():
-            next_qs = self.target_qnet(ns)
-            next_q = next_qs.max(dim=1)[0]
-            target = r + (1 - d) * self.gamma * next_q
+            s  = torch.as_tensor(state,      dtype=torch.float32, device=self.device)
+            a  = torch.as_tensor(action,     dtype=torch.int64,   device=self.device)
+            r  = torch.as_tensor(reward,     dtype=torch.float32, device=self.device)
+            ns = torch.as_tensor(next_state, dtype=torch.float32, device=self.device)
+            d  = torch.as_tensor(done,       dtype=torch.float32, device=self.device)
 
 
-        self.qnet.zero_grad(set_to_none=True)
-        loss = nn.MSELoss()(qs, target)
-        loss.backward()
-        self.optimizer.step()
+            qs = self.qnet(s).gather(1, a.unsqueeze(1)).squeeze(1)
+
+            with torch.no_grad():
+                next_qs = self.target_qnet(ns)
+                next_q = next_qs.max(dim=1)[0]
+                target = r + (1 - d) * self.gamma * next_q
+
+
+            self.qnet.zero_grad(set_to_none=True)
+            loss = nn.MSELoss()(qs, target)
+            loss.backward()
+            self.optimizer.step()
+
+        # step 기준 타깃 동기화
+        if self.global_step % self.target_sync_every == 0:
+            self.sync_qnet()
 
 
 class ReplayBuffer:
