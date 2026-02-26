@@ -4,7 +4,7 @@
 
 ## 1. 프로젝트 개요
 
-- 학습 알고리즘: DQN (Replay Buffer + Target Network)
+- 학습 알고리즘: DQN (Replay Buffer + Target Network + Epsilon Decay)
 - 환경: `MountainCar-v0`
 - 출력:
   - 콘솔 로그: 학습 소요 시간, 마지막 평균 보상
@@ -85,13 +85,12 @@ Plot saved to: artifacts/quick_reward.png
 | `--profile` | `quick` \| `full` | 실행 프로필 선택 | `quick` |
 | `--episodes` | 양의 정수 | 에피소드 수 직접 지정 | 프로필 기본값 사용 |
 | `--trials` | 양의 정수 | trial 반복 횟수 | 프로필 기본값 사용 |
-| `--sync-interval` | 양의 정수 | 타깃 네트워크 동기화 간격 | 프로필 기본값 사용 |
 | `--plot-path` | 문자열 경로 | 결과 플롯 저장 경로 | 프로필별 기본 경로 |
 | `--seed` | 정수 | 랜덤 시드 고정 | 미지정 (`None`) |
 
 참고:
 
-- `--episodes`, `--trials`, `--sync-interval`은 지정하지 않으면 선택한 `profile`의 값이 적용됩니다.
+- `--episodes`, `--trials`은 지정하지 않으면 선택한 `profile`의 값이 적용됩니다.
 - 음수/0은 허용되지 않습니다 (`argparse` 검증).
 
 ## 5. 테스트 실행
@@ -118,8 +117,8 @@ python3 -m pytest -q -m integration
 
 ```text
 .
-├── agent.py          # QNet, DQNAgent, ReplayBuffer
-├── train.py          # TrainingConfig/TrainingResult, 학습 루프
+├── agent.py          # AgentConfig, QNet, DQNAgent, ReplayBuffer
+├── train.py          # TrainingConfig/TrainingResult, 학습 오케스트레이션
 ├── main.py           # CLI 진입점, 학습 실행, 플롯 저장
 ├── viz.py            # 보상 곡선 PNG 저장
 ├── tests
@@ -135,27 +134,38 @@ python3 -m pytest -q -m integration
 
 | 항목 | 기본값 |
 |---|---|
-| `episodes` | `1000` |
-| `trials` | `100` |
-| `sync_interval` | `20` |
+| `episodes` | `1500` |
+| `trials` | `40` |
 | `env_id` | `"MountainCar-v0"` |
 | `render_mode` | `"rgb_array"` |
-| `epsilon` | `0.1` |
-| `gamma` | `0.99` |
-| `lr` | `0.0005` |
-| `buffer_size` | `10000` |
-| `batch_size` | `32` |
-| `action_space` | `3` |
-| `reward_shaping_scale` | `10.0` |
-| `reward_shaping_offset` | `0.5` |
+| `agent_config` | `AgentConfig()` |
 | `device` | `None` (자동 선택) |
 | `seed` | `None` |
 | `log_device` | `True` |
 | `log_progress` | `True` |
 
+`agent.py`의 `AgentConfig` 기본값:
+
+| 항목 | 기본값 |
+|---|---|
+| `gamma` | `0.99` |
+| `lr` | `0.004` |
+| `buffer_size` | `10000` |
+| `batch_size` | `128` |
+| `action_space` | `3` |
+| `hidden_dim` | `256` |
+| `n_timesteps` | `120000` |
+| `train_start` | `1000` |
+| `train_freq` | `16` |
+| `gradient_steps` | `8` |
+| `eps_start` | `1.0` |
+| `eps_final` | `0.07` |
+| `exploration_fraction` | `0.2` |
+| `target_sync_every` | `600` |
+
 프로필 차이:
 
-- `quick`: `episodes=100`, `trials=1`, `sync_interval=10`, `render_mode=None`, `log_progress=False`
+- `quick`: `episodes=100`, `trials=1`, `render_mode=None`, `log_progress=False`
 - `full`: `TrainingConfig` 기본값 사용
 
 ## 8. 트러블슈팅
@@ -169,4 +179,3 @@ python3 -m pytest -q -m integration
 
 - `--plot-path`를 명시해 경로를 직접 지정해 보세요.
 - 기본 경로는 `artifacts/` 하위입니다. 폴더가 없으면 코드가 자동 생성합니다.
-
