@@ -1,28 +1,21 @@
 import time
-from dataclasses import dataclass
+import random
+from dataclasses import dataclass, field
 
 import gymnasium as gym
 import numpy as np
 import torch
 
-from agent import DQNAgent
+from agent import AgentConfig, DQNAgent
 
 
 @dataclass(frozen=True)
 class TrainingConfig:
-    episodes: int = 1000
-    trials: int = 100
-    sync_interval: int = 20
+    episodes: int = 1500
+    trials: int = 40
     env_id: str = "MountainCar-v0"
     render_mode: str | None = "rgb_array"
-    epsilon: float = 0.1
-    gamma: float = 0.99
-    lr: float = 0.0005
-    buffer_size: int = 10000
-    batch_size: int = 32
-    action_space: int = 3
-    reward_shaping_scale: float = 10.0
-    reward_shaping_offset: float = 0.5
+    agent_config: AgentConfig = field(default_factory=AgentConfig)
     device: str | None = None
     seed: int | None = None
     log_device: bool = True
@@ -38,6 +31,7 @@ class TrainingResult:
 
 def run_training(config: TrainingConfig) -> TrainingResult:
     if config.seed is not None:
+        random.seed(config.seed)
         np.random.seed(config.seed)
         torch.manual_seed(config.seed)
 
@@ -52,12 +46,7 @@ def run_training(config: TrainingConfig) -> TrainingResult:
     try:
         for trial in range(config.trials):
             agent = DQNAgent(
-                epsilon=config.epsilon,
-                gamma=config.gamma,
-                lr=config.lr,
-                buffer_size=config.buffer_size,
-                batch_size=config.batch_size,
-                action_space=config.action_space,
+                config=config.agent_config,
                 device=config.device,
                 log_device=config.log_device,
             )
@@ -75,19 +64,13 @@ def run_training(config: TrainingConfig) -> TrainingResult:
                 while not done:
                     action = agent.get_action(state)
                     next_state, reward, terminated, truncated, _ = env.step(action)
-                    origin_reward = reward
-                    reward += abs(
-                        (next_state[0] + config.reward_shaping_offset) * next_state[1]
-                    ) * config.reward_shaping_scale
                     done = terminated or truncated
 
                     agent.update(state, action, reward, next_state, done)
                     state = next_state
-                    total_reward += origin_reward
+                    total_reward += float(reward)
 
                 reward_history.append(float(total_reward))
-                if episode % config.sync_interval == 0:
-                    agent.sync_qnet()
 
             reward_histories.append(reward_history)
             if config.log_progress:

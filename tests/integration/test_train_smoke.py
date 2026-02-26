@@ -1,5 +1,6 @@
 import pytest
 
+from agent import AgentConfig
 from train import TrainingConfig, run_training
 
 
@@ -8,11 +9,17 @@ def test_run_training_smoke():
     config = TrainingConfig(
         episodes=3,
         trials=1,
-        sync_interval=1,
         render_mode=None,
         seed=123,
-        buffer_size=64,
-        batch_size=4,
+        agent_config=AgentConfig(
+            buffer_size=64,
+            batch_size=4,
+            train_start=8,
+            train_freq=2,
+            gradient_steps=1,
+            target_sync_every=20,
+            n_timesteps=1_000,
+        ),
         log_device=False,
         log_progress=False,
     )

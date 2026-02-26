@@ -1,37 +1,111 @@
 import numpy as np
 import torch
 
-from agent import DQNAgent
+from agent import AgentConfig, DQNAgent
 
 
-def test_update_changes_qnet_parameters():
-    agent = DQNAgent(batch_size=4, buffer_size=64, device="cpu", log_device=False)
-    initial_params = [param.detach().clone() for param in agent.qnet.parameters()]
+def _params(model: torch.nn.Module) -> list[torch.Tensor]:
+    return [param.detach().clone() for param in model.parameters()]
 
-    for i in range(10):
-        state = np.array([i * 0.01, i * 0.02], dtype=np.float32)
-        action = i % agent.action_space
-        reward = 1.0
-        next_state = state + 0.05
-        done = False
-        agent.update(state, action, reward, next_state, done)
 
-    updated_params = [param.detach().clone() for param in agent.qnet.parameters()]
-    changed = any(
-        not torch.allclose(before, after)
-        for before, after in zip(initial_params, updated_params, strict=True)
+def _changed(before: list[torch.Tensor], after: list[torch.Tensor]) -> bool:
+    return any(
+        not torch.allclose(prev, cur)
+        for prev, cur in zip(before, after, strict=True)
     )
 
-    assert changed
+
+def _transition(i: int, action_space: int):
+    state = np.array([i * 0.01, i * 0.02], dtype=np.float32)
+    action = i % action_space
+    reward = 1.0
+    next_state = state + 0.05
+    done = False
+    return state, action, reward, next_state, done
 
 
-def test_sync_qnet_copies_weights_to_target_network():
-    agent = DQNAgent(device="cpu", log_device=False)
+def test_update_does_not_train_before_warmup():
+    config = AgentConfig(
+        buffer_size=64,
+        batch_size=4,
+        train_start=8,
+        train_freq=1,
+        gradient_steps=1,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    initial_params = _params(agent.qnet)
+
+    for i in range(config.train_start - 1):
+        agent.update(*_transition(i, agent.action_space))
+
+    updated_params = _params(agent.qnet)
+    assert not _changed(initial_params, updated_params)
+
+
+def test_update_respects_train_frequency_after_warmup():
+    config = AgentConfig(
+        buffer_size=64,
+        batch_size=4,
+        train_start=4,
+        train_freq=3,
+        gradient_steps=1,
+        target_sync_every=9999,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    initial_params = _params(agent.qnet)
+
+    for i in range(4):
+        agent.update(*_transition(i, agent.action_space))
+
+    updated_params = _params(agent.qnet)
+    assert not _changed(initial_params, updated_params)
+
+
+def test_update_changes_qnet_parameters_on_train_step():
+    np.random.seed(0)
+    torch.manual_seed(0)
+    config = AgentConfig(
+        buffer_size=128,
+        batch_size=4,
+        train_start=4,
+        train_freq=2,
+        gradient_steps=2,
+        target_sync_every=9999,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    initial_params = _params(agent.qnet)
+
+    for i in range(6):
+        agent.update(*_transition(i, agent.action_space))
+
+    updated_params = _params(agent.qnet)
+    assert _changed(initial_params, updated_params)
+
+
+def test_target_network_syncs_on_schedule():
+    config = AgentConfig(
+        buffer_size=128,
+        batch_size=4,
+        train_start=4,
+        train_freq=1,
+        gradient_steps=1,
+        target_sync_every=5,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
     with torch.no_grad():
         for param in agent.qnet.parameters():
             param.add_(0.5)
 
-    agent.sync_qnet()
+    out_of_sync = any(
+        not torch.allclose(source, target)
+        for source, target in zip(
+            agent.qnet.parameters(), agent.target_qnet.parameters(), strict=True
+        )
+    )
+    assert out_of_sync
+
+    for i in range(5):
+        agent.update(*_transition(i, agent.action_space))
 
     for source, target in zip(
         agent.qnet.parameters(), agent.target_qnet.parameters(), strict=True
