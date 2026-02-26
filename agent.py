@@ -1,5 +1,5 @@
 import random
-from collections import defaultdict, deque
+from collections import deque
 
 import numpy as np
 import torch
@@ -24,22 +24,35 @@ class QNet(nn.Module):
 
 
 class DQNAgent:
-    def __init__(self):
-        self.epsilon = 0.1
-        self.gamma = 0.99
-        self.lr = 0.0005
-        self.buffer_size = 10000
-        self.batch_size = 32
-        self.action_space = 3
+    def __init__(
+        self,
+        epsilon=0.1,
+        gamma=0.99,
+        lr=0.0005,
+        buffer_size=10000,
+        batch_size=32,
+        action_space=3,
+        device=None,
+        log_device=True,
+    ):
+        self.epsilon = epsilon
+        self.gamma = gamma
+        self.lr = lr
+        self.buffer_size = buffer_size
+        self.batch_size = batch_size
+        self.action_space = action_space
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(f"Using device: {self.device}")
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = torch.device(device)
+        if log_device:
+            print(f"Using device: {self.device}")
         self.replay_buffer = ReplayBuffer(self.buffer_size, self.batch_size)
         self.qnet = QNet(self.action_space).to(self.device)
         self.target_qnet = QNet(self.action_space).to(self.device)
         self.sync_qnet()
         self.optimizer = torch.optim.Adam(self.qnet.parameters(), lr=self.lr)
-        self.loss_fn = nn.MSELoss()
 
     def sync_qnet(self):
         self.target_qnet.load_state_dict(self.qnet.state_dict())
