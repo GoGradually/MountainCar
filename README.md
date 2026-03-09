@@ -83,14 +83,14 @@ Plot saved to: artifacts/quick_reward.png
 | 옵션 | 값 | 설명 | 기본 동작 |
 |---|---|---|---|
 | `--profile` | `quick` \| `full` | 실행 프로필 선택 | `quick` |
-| `--episodes` | 양의 정수 | 에피소드 수 직접 지정 | 프로필 기본값 사용 |
+| `--timesteps` | 양의 정수 | 총 환경 step 수 직접 지정 | 프로필 기본값 사용 |
 | `--trials` | 양의 정수 | trial 반복 횟수 | 프로필 기본값 사용 |
 | `--plot-path` | 문자열 경로 | 결과 플롯 저장 경로 | 프로필별 기본 경로 |
 | `--seed` | 정수 | 랜덤 시드 고정 | 미지정 (`None`) |
 
 참고:
 
-- `--episodes`, `--trials`은 지정하지 않으면 선택한 `profile`의 값이 적용됩니다.
+- `--timesteps`, `--trials`은 지정하지 않으면 선택한 `profile`의 값이 적용됩니다.
 - 음수/0은 허용되지 않습니다 (`argparse` 검증).
 
 ## 5. 테스트 실행
@@ -143,7 +143,7 @@ python3 -m pytest -q -m "integration and slow"
 
 | 항목 | 기본값                |
 |---|--------------------|
-| `episodes` | `1200`             |
+| `total_timesteps` | `120000`           |
 | `trials` | `3`                |
 | `env_id` | `"MountainCar-v0"` |
 | `render_mode` | `None`             |
@@ -163,7 +163,6 @@ python3 -m pytest -q -m "integration and slow"
 | `batch_size` | `128` |
 | `action_space` | `3` |
 | `hidden_dim` | `256` |
-| `n_timesteps` | `120000` |
 | `train_start` | `1000` |
 | `train_freq` | `16` |
 | `gradient_steps` | `8` |
@@ -175,7 +174,7 @@ python3 -m pytest -q -m "integration and slow"
 
 프로필 차이:
 
-- `quick`: `episodes=100`, `trials=1`, `render_mode=None`, `log_progress=False`
+- `quick`: `total_timesteps=20000`, `trials=1`, `render_mode=None`, `log_progress=False`
 - `full`: `TrainingConfig` 기본값 사용
 
 알고리즘 구현 메모:
@@ -183,6 +182,8 @@ python3 -m pytest -q -m "integration and slow"
 - 행동 선택은 online Q-network가 담당합니다.
 - 다음 상태의 bootstrap 값은 target Q-network의 최대 Q값으로 계산합니다.
 - 즉, target network를 사용하는 vanilla DQN 형식입니다.
+- 학습 종료는 episode 수가 아니라 `total_timesteps` 기준입니다.
+- step budget 중간에 끝난 마지막 미완료 episode는 reward history에 포함하지 않습니다.
 
 ## 8. 트러블슈팅
 

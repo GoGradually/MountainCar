@@ -14,7 +14,7 @@ def positive_int(value: str) -> int:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train DQN for MountainCar-v0")
     parser.add_argument("--profile", choices=["quick", "full"], default="quick")
-    parser.add_argument("--episodes", type=positive_int, default=None)
+    parser.add_argument("--timesteps", type=positive_int, default=None)
     parser.add_argument("--trials", type=positive_int, default=None)
     parser.add_argument("--plot-path", type=str, default=None)
     parser.add_argument("--seed", type=int, default=None)
@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
 def build_config(args: argparse.Namespace) -> TrainingConfig:
     if args.profile == "quick":
         config = TrainingConfig(
-            episodes=100,
+            total_timesteps=20_000,
             trials=1,
             render_mode=None,
             log_progress=False,
@@ -32,11 +32,11 @@ def build_config(args: argparse.Namespace) -> TrainingConfig:
     else:
         config = TrainingConfig()
 
-    episodes = args.episodes if args.episodes is not None else config.episodes
+    timesteps = args.timesteps if args.timesteps is not None else config.total_timesteps
     trials = args.trials if args.trials is not None else config.trials
 
     return TrainingConfig(
-        episodes=episodes,
+        total_timesteps=timesteps,
         trials=trials,
         env_id=config.env_id,
         render_mode=config.render_mode,

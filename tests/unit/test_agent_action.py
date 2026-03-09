@@ -7,12 +7,11 @@ from agent import AgentConfig, DQNAgent
 
 def test_epsilon_linearly_decays_and_clamps():
     config = AgentConfig(
-        n_timesteps=100,
         exploration_fraction=0.5,
         eps_start=1.0,
         eps_final=0.1,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=100, config=config, device="cpu", log_device=False)
 
     assert agent.exploration_steps == 50
     assert agent.epsilon() == pytest.approx(1.0)
@@ -29,12 +28,11 @@ def test_epsilon_linearly_decays_and_clamps():
 
 def test_get_action_greedy_after_exploration_window():
     config = AgentConfig(
-        n_timesteps=10,
         exploration_fraction=0.5,
         eps_start=1.0,
         eps_final=0.0,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=10, config=config, device="cpu", log_device=False)
     agent.global_step = agent.exploration_steps
 
     with torch.no_grad():
@@ -50,7 +48,7 @@ def test_get_action_greedy_after_exploration_window():
 def test_get_action_exploration_samples_valid_actions():
     np.random.seed(0)
     config = AgentConfig(eps_start=1.0, eps_final=1.0)
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=120_000, config=config, device="cpu", log_device=False)
     actions = [agent.get_action(np.array([0.0, 0.0], dtype=np.float32)) for _ in range(200)]
 
     assert all(0 <= action < agent.action_space for action in actions)

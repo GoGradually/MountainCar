@@ -9,7 +9,7 @@ from train import TrainingConfig, run_training
 @pytest.mark.slow
 def test_run_training_reaches_mountain_car_threshold():
     config = TrainingConfig(
-        episodes=700,
+        total_timesteps=120_000,
         trials=3,
         render_mode=None,
         seed=123,

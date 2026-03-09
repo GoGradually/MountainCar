@@ -15,7 +15,6 @@ class AgentConfig:
     batch_size: int = 128
     action_space: int = 3
     hidden_dim: int = 256
-    n_timesteps: int = 120_000
     train_start: int = 1_000
     train_freq: int = 16
     gradient_steps: int = 8
@@ -46,6 +45,7 @@ class QNet(nn.Module):
 class DQNAgent:
     def __init__(
         self,
+        total_timesteps: int,
         config: AgentConfig | None = None,
         device: str | None = None,
         log_device: bool = True,
@@ -56,7 +56,7 @@ class DQNAgent:
         self.buffer_size = self.config.buffer_size
         self.batch_size = self.config.batch_size
         self.action_space = self.config.action_space
-        self.n_timesteps = self.config.n_timesteps
+        self.total_timesteps = total_timesteps
         self.train_start = self.config.train_start
         self.train_freq = self.config.train_freq
         self.gradient_steps = self.config.gradient_steps
@@ -65,7 +65,7 @@ class DQNAgent:
         self.eps_final = self.config.eps_final
         self.exploration_fraction = self.config.exploration_fraction
         self.target_sync_every = self.config.target_sync_every
-        self.exploration_steps = int(self.n_timesteps * self.exploration_fraction)
+        self.exploration_steps = int(self.total_timesteps * self.exploration_fraction)
         self.global_step = 0
 
         if device is None:
@@ -131,7 +131,7 @@ class DQNAgent:
             self.optimizer.zero_grad(set_to_none=True)
             loss = self.loss_fn(q_values, target)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.qnet.parameters(), self.max_grad_norm)
+            torch.nn.utils.clip_grad_norm_(self.qnet.parameters(), self.max_grad_norm) # gradient clipping
             self.optimizer.step()
 
         if self.global_step % self.target_sync_every == 0:

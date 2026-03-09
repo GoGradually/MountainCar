@@ -33,7 +33,7 @@ def test_update_does_not_train_before_warmup():
         train_freq=1,
         gradient_steps=1,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
     initial_params = _params(agent.qnet)
 
     for i in range(config.train_start - 1):
@@ -45,7 +45,7 @@ def test_update_does_not_train_before_warmup():
 
 def test_next_state_values_use_target_network_max():
     config = AgentConfig(action_space=2)
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
 
     class FixedNet(torch.nn.Module):
         def __init__(self, values: list[float]):
@@ -74,7 +74,7 @@ def test_update_respects_train_frequency_after_warmup():
         gradient_steps=1,
         target_sync_every=9999,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
     initial_params = _params(agent.qnet)
 
     for i in range(4):
@@ -95,7 +95,7 @@ def test_update_changes_qnet_parameters_on_train_step():
         gradient_steps=2,
         target_sync_every=9999,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
     initial_params = _params(agent.qnet)
 
     for i in range(6):
@@ -115,7 +115,7 @@ def test_update_applies_gradient_clipping_on_train_step():
         target_sync_every=9999,
         max_grad_norm=3.5,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
 
     with patch("torch.nn.utils.clip_grad_norm_") as mock_clip:
         for i in range(4):
@@ -142,7 +142,7 @@ def test_update_skips_gradient_clipping_before_warmup_and_off_frequency():
         gradient_steps=1,
         target_sync_every=9999,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
 
     with patch("torch.nn.utils.clip_grad_norm_") as mock_clip:
         for i in range(4):
@@ -160,7 +160,7 @@ def test_target_network_syncs_on_schedule():
         gradient_steps=1,
         target_sync_every=5,
     )
-    agent = DQNAgent(config=config, device="cpu", log_device=False)
+    agent = DQNAgent(total_timesteps=1_000, config=config, device="cpu", log_device=False)
     with torch.no_grad():
         for param in agent.qnet.parameters():
             param.add_(0.5)
