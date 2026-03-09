@@ -1,10 +1,10 @@
-# MountainCar DQN
+# MountainCar Double DQN
 
-`gymnasium`의 `MountainCar-v0` 환경에서 DQN을 학습하고, 에피소드별 평균 보상 곡선을 PNG로 저장하는 프로젝트입니다.
+`gymnasium`의 `MountainCar-v0` 환경에서 Double DQN을 학습하고, 에피소드별 평균 보상 곡선을 PNG로 저장하는 프로젝트입니다.
 
 ## 1. 프로젝트 개요
 
-- 학습 알고리즘: DQN (Replay Buffer + Target Network + Epsilon Decay)
+- 학습 알고리즘: Double DQN (Replay Buffer + Online/Target Network + Epsilon Decay)
 - 환경: `MountainCar-v0`
 - 출력:
   - 콘솔 로그: 학습 소요 시간, 마지막 평균 보상
@@ -109,6 +109,15 @@ python3 -m pytest -q
 python3 -m pytest -q -m integration
 ```
 
+### 5.3 느린 수렴 검증 테스트 실행
+
+```bash
+python3 -m pytest -q -m "integration and slow"
+```
+
+- MountainCar 수렴 여부를 확인하는 장시간 테스트입니다.
+- 기본 `pytest` 경로에서는 제외됩니다.
+
 권장 실행 방식:
 
 - `pytest` 단독 호출보다 `python3 -m pytest` 방식이 import 경로 이슈를 줄입니다.
@@ -134,10 +143,10 @@ python3 -m pytest -q -m integration
 
 | 항목 | 기본값 |
 |---|---|
-| `episodes` | `1500` |
-| `trials` | `40` |
+| `episodes` | `700` |
+| `trials` | `3` |
 | `env_id` | `"MountainCar-v0"` |
-| `render_mode` | `"rgb_array"` |
+| `render_mode` | `None` |
 | `agent_config` | `AgentConfig()` |
 | `device` | `None` (자동 선택) |
 | `seed` | `None` |
@@ -148,7 +157,7 @@ python3 -m pytest -q -m integration
 
 | 항목 | 기본값 |
 |---|---|
-| `gamma` | `0.99` |
+| `gamma` | `0.98` |
 | `lr` | `0.004` |
 | `buffer_size` | `10000` |
 | `batch_size` | `128` |
@@ -167,6 +176,12 @@ python3 -m pytest -q -m integration
 
 - `quick`: `episodes=100`, `trials=1`, `render_mode=None`, `log_progress=False`
 - `full`: `TrainingConfig` 기본값 사용
+
+알고리즘 구현 메모:
+
+- 행동 선택은 online Q-network가 담당합니다.
+- 다음 상태의 bootstrap 값 평가는 target Q-network가 담당합니다.
+- 즉, 다음 행동 선택과 다음 Q값 평가는 서로 다른 네트워크로 분리된 Double DQN입니다.
 
 ## 8. 트러블슈팅
 

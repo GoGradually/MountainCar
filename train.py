@@ -11,10 +11,10 @@ from agent import AgentConfig, DQNAgent
 
 @dataclass(frozen=True)
 class TrainingConfig:
-    episodes: int = 1500
-    trials: int = 40
+    episodes: int = 1200
+    trials: int = 3
     env_id: str = "MountainCar-v0"
-    render_mode: str | None = "rgb_array"
+    render_mode: str | None = None
     agent_config: AgentConfig = field(default_factory=AgentConfig)
     device: str | None = None
     seed: int | None = None
