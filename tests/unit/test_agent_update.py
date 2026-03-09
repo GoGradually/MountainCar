@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from unittest.mock import patch
 
 from agent import AgentConfig, DQNAgent
 
@@ -102,6 +103,52 @@ def test_update_changes_qnet_parameters_on_train_step():
 
     updated_params = _params(agent.qnet)
     assert _changed(initial_params, updated_params)
+
+
+def test_update_applies_gradient_clipping_on_train_step():
+    config = AgentConfig(
+        buffer_size=64,
+        batch_size=4,
+        train_start=4,
+        train_freq=1,
+        gradient_steps=1,
+        target_sync_every=9999,
+        max_grad_norm=3.5,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
+
+    with patch("torch.nn.utils.clip_grad_norm_") as mock_clip:
+        for i in range(4):
+            agent.update(*_transition(i, agent.action_space))
+
+    assert mock_clip.call_count == 1
+    params, max_norm = mock_clip.call_args.args
+    expected_params = list(agent.qnet.parameters())
+    clipped_params = list(params)
+    assert len(clipped_params) == len(expected_params)
+    assert all(
+        clipped is expected
+        for clipped, expected in zip(clipped_params, expected_params, strict=True)
+    )
+    assert max_norm == 3.5
+
+
+def test_update_skips_gradient_clipping_before_warmup_and_off_frequency():
+    config = AgentConfig(
+        buffer_size=64,
+        batch_size=4,
+        train_start=4,
+        train_freq=3,
+        gradient_steps=1,
+        target_sync_every=9999,
+    )
+    agent = DQNAgent(config=config, device="cpu", log_device=False)
+
+    with patch("torch.nn.utils.clip_grad_norm_") as mock_clip:
+        for i in range(4):
+            agent.update(*_transition(i, agent.action_space))
+
+    assert mock_clip.call_count == 0
 
 
 def test_target_network_syncs_on_schedule():

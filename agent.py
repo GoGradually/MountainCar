@@ -19,6 +19,7 @@ class AgentConfig:
     train_start: int = 1_000
     train_freq: int = 16
     gradient_steps: int = 8
+    max_grad_norm: float = 10.0
     eps_start: float = 1.0
     eps_final: float = 0.07
     exploration_fraction: float = 0.2
@@ -59,6 +60,7 @@ class DQNAgent:
         self.train_start = self.config.train_start
         self.train_freq = self.config.train_freq
         self.gradient_steps = self.config.gradient_steps
+        self.max_grad_norm = self.config.max_grad_norm
         self.eps_start = self.config.eps_start
         self.eps_final = self.config.eps_final
         self.exploration_fraction = self.config.exploration_fraction
@@ -124,12 +126,13 @@ class DQNAgent:
 
             q_values = self.qnet(s).gather(1, a.unsqueeze(1)).squeeze(1)
             with torch.no_grad():
-                next_q = self._next_state_values(ns)
+                next_q = self._next_state_values(ns) # Double DQN 적용
                 target = r + (1 - d) * self.gamma * next_q
 
             self.optimizer.zero_grad(set_to_none=True)
             loss = self.loss_fn(q_values, target)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.qnet.parameters(), self.max_grad_norm) # gradient clipping
             self.optimizer.step()
 
         if self.global_step % self.target_sync_every == 0:

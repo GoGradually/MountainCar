@@ -167,6 +167,7 @@ python3 -m pytest -q -m "integration and slow"
 | `train_start` | `1000` |
 | `train_freq` | `16` |
 | `gradient_steps` | `8` |
+| `max_grad_norm` | `10.0` |
 | `eps_start` | `1.0` |
 | `eps_final` | `0.07` |
 | `exploration_fraction` | `0.2` |
