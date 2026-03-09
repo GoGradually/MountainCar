@@ -97,13 +97,16 @@ class DQNAgent:
         with torch.no_grad():
             return self.target_qnet(next_state).max(dim=1).values
 
-    def get_action(self, state: np.ndarray) -> int:
-        if np.random.rand() < self.epsilon():
-            return int(np.random.choice(self.action_space))
+    def get_greedy_action(self, state: np.ndarray) -> int:
         with torch.no_grad():
             s = torch.as_tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
             q_values = self.qnet(s)
             return int(torch.argmax(q_values, dim=1).item())
+
+    def get_action(self, state: np.ndarray) -> int:
+        if np.random.rand() < self.epsilon():
+            return int(np.random.choice(self.action_space))
+        return self.get_greedy_action(state)
 
     def update(self, state, action, reward, next_state, done) -> None:
         self.global_step += 1

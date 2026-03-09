@@ -61,14 +61,18 @@ def main() -> None:
         plot_path = "artifacts/full_reward.png"
 
     save_reward_plot(
-        result.reward_means,
+        result.eval_timesteps,
+        result.eval_reward_raw,
+        result.eval_reward_smoothed,
         plot_path,
         f"MountainCar DQN ({args.profile})",
+        "Timesteps",
+        "Mean Evaluation Reward",
     )
 
-    last_reward = result.reward_means[-1] if result.reward_means else 0.0
+    last_reward = result.eval_reward_smoothed[-1] if result.eval_reward_smoothed else 0.0
     print(f"Elapsed: {result.elapsed_sec:.4f}s")
-    print(f"Last mean reward: {last_reward:.4f}")
+    print(f"Last smoothed eval reward: {last_reward:.4f}")
     print(f"Plot saved to: {plot_path}")
 
 

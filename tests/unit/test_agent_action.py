@@ -45,6 +45,23 @@ def test_get_action_greedy_after_exploration_window():
     assert action == 2
 
 
+def test_get_greedy_action_ignores_epsilon():
+    config = AgentConfig(
+        eps_start=1.0,
+        eps_final=1.0,
+    )
+    agent = DQNAgent(total_timesteps=10, config=config, device="cpu", log_device=False)
+
+    with torch.no_grad():
+        for param in agent.qnet.parameters():
+            param.zero_()
+        agent.qnet.l3.bias.copy_(torch.tensor([0.0, 1.0, 2.0]))
+
+    action = agent.get_greedy_action(np.array([0.0, 0.0], dtype=np.float32))
+
+    assert action == 2
+
+
 def test_get_action_exploration_samples_valid_actions():
     np.random.seed(0)
     config = AgentConfig(eps_start=1.0, eps_final=1.0)

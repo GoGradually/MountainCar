@@ -1,14 +1,14 @@
 # MountainCar DQN
 
-`gymnasium`의 `MountainCar-v0` 환경에서 DQN을 학습하고, 에피소드별 평균 보상 곡선을 PNG로 저장하는 프로젝트입니다.
+`gymnasium`의 `MountainCar-v0` 환경에서 DQN을 학습하고, 고정 timestep 간격의 evaluation 보상 곡선을 PNG로 저장하는 프로젝트입니다.
 
 ## 1. 프로젝트 개요
 
 - 학습 알고리즘: DQN (Replay Buffer + Target Network + Epsilon Decay)
 - 환경: `MountainCar-v0`
 - 출력:
-  - 콘솔 로그: 학습 소요 시간, 마지막 평균 보상
-  - 이미지: 보상 곡선 PNG (`artifacts/*.png`)
+  - 콘솔 로그: 학습 소요 시간, 마지막 smoothed evaluation 보상
+  - 이미지: evaluation 보상 곡선 PNG (`artifacts/*.png`)
 
 ## 2. 빠른 시작
 
@@ -74,7 +74,7 @@ python3 main.py --profile quick --plot-path artifacts/custom_reward.png
 ```text
 Using device: cpu
 Elapsed: 0.8014s
-Last mean reward: -200.0000
+Last smoothed eval reward: -200.0000
 Plot saved to: artifacts/quick_reward.png
 ```
 
@@ -150,6 +150,10 @@ python3 -m pytest -q -m "integration and slow"
 | `agent_config` | `AgentConfig()`    |
 | `device` | `None` (자동 선택)     |
 | `seed` | `None`             |
+| `eval_freq` | `2000`             |
+| `n_eval_episodes` | `20`               |
+| `eval_window` | `5`                |
+| `eval_seed` | `1000000`          |
 | `log_device` | `True`             |
 | `log_progress` | `True`             |
 
@@ -184,6 +188,8 @@ python3 -m pytest -q -m "integration and slow"
 - 즉, target network를 사용하는 vanilla DQN 형식입니다.
 - 학습 종료는 episode 수가 아니라 `total_timesteps` 기준입니다.
 - step budget 중간에 끝난 마지막 미완료 episode는 reward history에 포함하지 않습니다.
+- 메인 plot은 `eval_freq` step마다 greedy policy로 측정한 raw evaluation reward와 5-point moving average를 `timesteps` 축으로 함께 그립니다.
+- evaluation episode의 초기 상태는 랜덤하게 뽑되, `eval_seed` 기반 RNG로 재현 가능하게 유지합니다.
 
 ## 8. 트러블슈팅
 
