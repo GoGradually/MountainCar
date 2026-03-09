@@ -43,7 +43,7 @@ def test_update_does_not_train_before_warmup():
     assert not _changed(initial_params, updated_params)
 
 
-def test_next_state_values_use_online_argmax_and_target_value():
+def test_next_state_values_use_target_network_max():
     config = AgentConfig(action_space=2)
     agent = DQNAgent(config=config, device="cpu", log_device=False)
 
@@ -62,7 +62,7 @@ def test_next_state_values_use_online_argmax_and_target_value():
     next_state = torch.zeros((3, 2), dtype=torch.float32, device=agent.device)
     next_q = agent._next_state_values(next_state)
 
-    assert torch.allclose(next_q, torch.tensor([2.0, 2.0, 2.0], device=agent.device))
+    assert torch.allclose(next_q, torch.tensor([9.0, 9.0, 9.0], device=agent.device))
 
 
 def test_update_respects_train_frequency_after_warmup():

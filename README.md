@@ -1,10 +1,10 @@
-# MountainCar Double DQN
+# MountainCar DQN
 
-`gymnasium`의 `MountainCar-v0` 환경에서 Double DQN을 학습하고, 에피소드별 평균 보상 곡선을 PNG로 저장하는 프로젝트입니다.
+`gymnasium`의 `MountainCar-v0` 환경에서 DQN을 학습하고, 에피소드별 평균 보상 곡선을 PNG로 저장하는 프로젝트입니다.
 
 ## 1. 프로젝트 개요
 
-- 학습 알고리즘: Double DQN (Replay Buffer + Online/Target Network + Epsilon Decay)
+- 학습 알고리즘: DQN (Replay Buffer + Target Network + Epsilon Decay)
 - 환경: `MountainCar-v0`
 - 출력:
   - 콘솔 로그: 학습 소요 시간, 마지막 평균 보상
@@ -181,8 +181,8 @@ python3 -m pytest -q -m "integration and slow"
 알고리즘 구현 메모:
 
 - 행동 선택은 online Q-network가 담당합니다.
-- 다음 상태의 bootstrap 값 평가는 target Q-network가 담당합니다.
-- 즉, 다음 행동 선택과 다음 Q값 평가는 서로 다른 네트워크로 분리된 Double DQN입니다.
+- 다음 상태의 bootstrap 값은 target Q-network의 최대 Q값으로 계산합니다.
+- 즉, target network를 사용하는 vanilla DQN 형식입니다.
 
 ## 8. 트러블슈팅
 

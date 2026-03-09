@@ -12,7 +12,7 @@ def positive_int(value: str) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train Double DQN for MountainCar-v0")
+    parser = argparse.ArgumentParser(description="Train DQN for MountainCar-v0")
     parser.add_argument("--profile", choices=["quick", "full"], default="quick")
     parser.add_argument("--episodes", type=positive_int, default=None)
     parser.add_argument("--trials", type=positive_int, default=None)
@@ -63,7 +63,7 @@ def main() -> None:
     save_reward_plot(
         result.reward_means,
         plot_path,
-        f"MountainCar Double DQN ({args.profile})",
+        f"MountainCar DQN ({args.profile})",
     )
 
     last_reward = result.reward_means[-1] if result.reward_means else 0.0

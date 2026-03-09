@@ -95,8 +95,7 @@ class DQNAgent:
 
     def _next_state_values(self, next_state: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            next_actions = self.qnet(next_state).argmax(dim=1, keepdim=True)
-            return self.target_qnet(next_state).gather(1, next_actions).squeeze(1)
+            return self.target_qnet(next_state).max(dim=1).values
 
     def get_action(self, state: np.ndarray) -> int:
         if np.random.rand() < self.epsilon():
@@ -126,13 +125,13 @@ class DQNAgent:
 
             q_values = self.qnet(s).gather(1, a.unsqueeze(1)).squeeze(1)
             with torch.no_grad():
-                next_q = self._next_state_values(ns) # Double DQN 적용
+                next_q = self._next_state_values(ns)
                 target = r + (1 - d) * self.gamma * next_q
 
             self.optimizer.zero_grad(set_to_none=True)
             loss = self.loss_fn(q_values, target)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(self.qnet.parameters(), self.max_grad_norm) # gradient clipping
+            torch.nn.utils.clip_grad_norm_(self.qnet.parameters(), self.max_grad_norm)
             self.optimizer.step()
 
         if self.global_step % self.target_sync_every == 0:
