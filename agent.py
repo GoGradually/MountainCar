@@ -9,7 +9,7 @@ import torch.nn as nn
 
 @dataclass(frozen=True)
 class AgentConfig:
-    gamma: float = 0.99
+    gamma: float = 0.98
     lr: float = 0.004
     buffer_size: int = 10_000
     batch_size: int = 128
@@ -91,6 +91,11 @@ class DQNAgent:
     def sync_qnet(self) -> None:
         self.target_qnet.load_state_dict(self.qnet.state_dict())
 
+    def _next_state_values(self, next_state: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            next_actions = self.qnet(next_state).argmax(dim=1, keepdim=True)
+            return self.target_qnet(next_state).gather(1, next_actions).squeeze(1)
+
     def get_action(self, state: np.ndarray) -> int:
         if np.random.rand() < self.epsilon():
             return int(np.random.choice(self.action_space))
@@ -119,7 +124,7 @@ class DQNAgent:
 
             q_values = self.qnet(s).gather(1, a.unsqueeze(1)).squeeze(1)
             with torch.no_grad():
-                next_q = self.target_qnet(ns).max(dim=1)[0]
+                next_q = self._next_state_values(ns)
                 target = r + (1 - d) * self.gamma * next_q
 
             self.optimizer.zero_grad(set_to_none=True)
