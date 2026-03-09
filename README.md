@@ -141,17 +141,17 @@ python3 -m pytest -q -m "integration and slow"
 
 `train.py`의 `TrainingConfig` 기본값:
 
-| 항목 | 기본값 |
-|---|---|
-| `episodes` | `700` |
-| `trials` | `3` |
+| 항목 | 기본값                |
+|---|--------------------|
+| `episodes` | `1200`             |
+| `trials` | `3`                |
 | `env_id` | `"MountainCar-v0"` |
-| `render_mode` | `None` |
-| `agent_config` | `AgentConfig()` |
-| `device` | `None` (자동 선택) |
-| `seed` | `None` |
-| `log_device` | `True` |
-| `log_progress` | `True` |
+| `render_mode` | `None`             |
+| `agent_config` | `AgentConfig()`    |
+| `device` | `None` (자동 선택)     |
+| `seed` | `None`             |
+| `log_device` | `True`             |
+| `log_progress` | `True`             |
 
 `agent.py`의 `AgentConfig` 기본값:
 
