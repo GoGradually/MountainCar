@@ -8,6 +8,7 @@
 - 환경: `MountainCar-v0`
 - 출력:
   - 콘솔 로그: 학습 소요 시간, 마지막 smoothed evaluation 보상
+  - CSV 로그: trial별 evaluation 값 (`artifacts/*_eval.csv`)
   - 이미지: evaluation 보상 곡선 PNG (`artifacts/*.png`)
 
 ## 2. 빠른 시작
@@ -46,6 +47,7 @@ python3 main.py --profile quick
 ```
 
 - 기본 저장 경로: `artifacts/quick_reward.png`
+- evaluation 로그 경로: `artifacts/quick_reward_eval.csv`
 
 ### 3.2 Full 프로필 (긴 학습)
 
@@ -54,6 +56,7 @@ python3 main.py --profile full
 ```
 
 - 기본 저장 경로: `artifacts/full_reward.png`
+- evaluation 로그 경로: `artifacts/full_reward_eval.csv`
 
 ### 3.3 재현 가능한 실행 (seed 고정)
 
@@ -67,6 +70,8 @@ python3 main.py --profile quick --seed 123
 python3 main.py --profile quick --plot-path artifacts/custom_reward.png
 ```
 
+- evaluation 로그 경로: `artifacts/custom_reward_eval.csv`
+
 ### 3.5 실행 결과 예시
 
 실행 시 다음과 같은 형태의 로그가 출력됩니다.
@@ -75,6 +80,7 @@ python3 main.py --profile quick --plot-path artifacts/custom_reward.png
 Using device: cpu
 Elapsed: 0.8014s
 Last smoothed eval reward: -200.0000
+Eval log saved to: artifacts/quick_reward_eval.csv
 Plot saved to: artifacts/quick_reward.png
 ```
 
@@ -92,6 +98,7 @@ Plot saved to: artifacts/quick_reward.png
 
 - `--timesteps`, `--trials`은 지정하지 않으면 선택한 `profile`의 값이 적용됩니다.
 - 음수/0은 허용되지 않습니다 (`argparse` 검증).
+- evaluation CSV는 plot 경로와 같은 디렉터리에 `{plot 파일명}_eval.csv` 규칙으로 자동 저장됩니다.
 
 ## 5. 테스트 실행
 
@@ -154,6 +161,7 @@ python3 -m pytest -q -m "integration and slow"
 | `n_eval_episodes` | `20`               |
 | `eval_window` | `5`                |
 | `eval_seed` | `1000000`          |
+| `eval_log_path` | `None`             |
 | `log_device` | `True`             |
 | `log_progress` | `True`             |
 
@@ -190,6 +198,7 @@ python3 -m pytest -q -m "integration and slow"
 - step budget 중간에 끝난 마지막 미완료 episode는 reward history에 포함하지 않습니다.
 - 메인 plot은 `eval_freq` step마다 greedy policy로 측정한 raw evaluation reward와 5-point moving average를 `timesteps` 축으로 함께 그립니다.
 - evaluation episode의 초기 상태는 랜덤하게 뽑되, `eval_seed` 기반 RNG로 재현 가능하게 유지합니다.
+- trial별 evaluation raw reward는 evaluation 시점마다 CSV에 `trial,timestep,eval_reward` 형식으로 즉시 저장됩니다.
 
 ## 8. 트러블슈팅
 

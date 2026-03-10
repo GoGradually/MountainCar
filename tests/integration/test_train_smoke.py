@@ -1,3 +1,5 @@
+import csv
+
 import numpy as np
 import pytest
 
@@ -55,9 +57,10 @@ class EnvFactory:
 
 
 @pytest.mark.integration
-def test_run_training_stops_at_exact_timesteps_and_discards_partial_episode(monkeypatch):
+def test_run_training_stops_at_exact_timesteps_and_discards_partial_episode(monkeypatch, tmp_path):
     env_factory = EnvFactory([5, 5, 5], [[3] * 20, [3] * 20])
     monkeypatch.setattr(train_module.gym, "make", env_factory)
+    eval_log_path = tmp_path / "single_trial_eval.csv"
 
     config = TrainingConfig(
         total_timesteps=12,
@@ -68,6 +71,7 @@ def test_run_training_stops_at_exact_timesteps_and_discards_partial_episode(monk
         n_eval_episodes=20,
         eval_window=2,
         eval_seed=99,
+        eval_log_path=str(eval_log_path),
         agent_config=AgentConfig(
             buffer_size=64,
             batch_size=4,
@@ -93,14 +97,24 @@ def test_run_training_stops_at_exact_timesteps_and_discards_partial_episode(monk
     assert all(len(env.reset_seeds) == 20 for env in env_factory.eval_envs)
     assert result.elapsed_sec >= 0.0
 
+    with eval_log_path.open(newline="", encoding="utf-8") as csv_file:
+        rows = list(csv.reader(csv_file))
+
+    assert rows == [
+        ["trial", "timestep", "eval_reward"],
+        ["1", "5", "3.0"],
+        ["1", "10", "3.0"],
+    ]
+
 
 @pytest.mark.integration
-def test_run_training_averages_available_trials_only(monkeypatch):
+def test_run_training_averages_available_trials_only(monkeypatch, tmp_path):
     env_factory = EnvFactory(
         [5, 5, 4, 4, 4],
         [[2] * 20, [2] * 20, [2] * 20, [4] * 20, [4] * 20, [4] * 20],
     )
     monkeypatch.setattr(train_module.gym, "make", env_factory)
+    eval_log_path = tmp_path / "multi_trial_eval.csv"
 
     config = TrainingConfig(
         total_timesteps=9,
@@ -111,6 +125,7 @@ def test_run_training_averages_available_trials_only(monkeypatch):
         n_eval_episodes=20,
         eval_window=2,
         eval_seed=99,
+        eval_log_path=str(eval_log_path),
         agent_config=AgentConfig(
             buffer_size=64,
             batch_size=4,
@@ -131,6 +146,19 @@ def test_run_training_averages_available_trials_only(monkeypatch):
     assert result.eval_timesteps == [3, 6, 9]
     assert result.eval_reward_raw == [3.0, 3.0, 3.0]
     assert result.eval_reward_smoothed == [3.0, 3.0, 3.0]
+
+    with eval_log_path.open(newline="", encoding="utf-8") as csv_file:
+        rows = list(csv.reader(csv_file))
+
+    assert rows == [
+        ["trial", "timestep", "eval_reward"],
+        ["1", "3", "2.0"],
+        ["1", "6", "2.0"],
+        ["1", "9", "2.0"],
+        ["2", "3", "4.0"],
+        ["2", "6", "4.0"],
+        ["2", "9", "4.0"],
+    ]
 
 
 @pytest.mark.integration

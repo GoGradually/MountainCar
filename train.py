@@ -1,7 +1,9 @@
-import time
 import random
+import time
+from csv import writer
 from dataclasses import dataclass, field
 from itertools import zip_longest
+from pathlib import Path
 
 import gymnasium as gym
 import numpy as np
@@ -23,6 +25,7 @@ class TrainingConfig:
     n_eval_episodes: int = 20
     eval_window: int = 5
     eval_seed: int = 1_000_000
+    eval_log_path: str | None = None
     log_device: bool = True
     log_progress: bool = True
 
@@ -111,6 +114,16 @@ def run_training(config: TrainingConfig) -> TrainingResult:
         env_kwargs["render_mode"] = config.render_mode
 
     env = gym.make(config.env_id, **env_kwargs)
+    eval_log_file = None
+    eval_log_writer = None
+    if config.eval_log_path is not None:
+        eval_log_path = Path(config.eval_log_path)
+        eval_log_path.parent.mkdir(parents=True, exist_ok=True)
+        eval_log_file = eval_log_path.open("w", newline="", encoding="utf-8")
+        eval_log_writer = writer(eval_log_file)
+        eval_log_writer.writerow(["trial", "timestep", "eval_reward"])
+        eval_log_file.flush()
+
     start = time.time()
     reward_histories: list[list[float]] = []
     timesteps_per_trial: list[int] = []
@@ -149,6 +162,9 @@ def run_training(config: TrainingConfig) -> TrainingResult:
                     if total_steps % config.eval_freq == 0:
                         eval_reward = _evaluate_agent(config, agent, eval_rng)
                         eval_history.append((total_steps, eval_reward))
+                        if eval_log_writer is not None and eval_log_file is not None:
+                            eval_log_writer.writerow([trial + 1, total_steps, eval_reward])
+                            eval_log_file.flush()
                     state = next_state
                     total_reward += float(reward)
 
@@ -165,6 +181,8 @@ def run_training(config: TrainingConfig) -> TrainingResult:
                 print(trial)
     finally:
         env.close()
+        if eval_log_file is not None:
+            eval_log_file.close()
 
     elapsed_sec = time.time() - start
     reward_means = _mean_reward_histories(reward_histories)

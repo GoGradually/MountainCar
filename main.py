@@ -1,4 +1,5 @@
 import argparse
+from pathlib import Path
 
 from train import TrainingConfig, run_training
 from viz import save_reward_plot
@@ -21,7 +22,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def build_config(args: argparse.Namespace) -> TrainingConfig:
+def resolve_plot_path(args: argparse.Namespace) -> str:
+    if args.plot_path is not None:
+        return args.plot_path
+    if args.profile == "quick":
+        return "artifacts/quick_reward.png"
+    return "artifacts/full_reward.png"
+
+
+def derive_eval_log_path(plot_path: str) -> str:
+    plot_file = Path(plot_path)
+    return str(plot_file.with_name(f"{plot_file.stem}_eval.csv"))
+
+
+def build_config(args: argparse.Namespace, eval_log_path: str | None = None) -> TrainingConfig:
     if args.profile == "quick":
         config = TrainingConfig(
             total_timesteps=20_000,
@@ -43,6 +57,11 @@ def build_config(args: argparse.Namespace) -> TrainingConfig:
         agent_config=config.agent_config,
         device=config.device,
         seed=args.seed,
+        eval_freq=config.eval_freq,
+        n_eval_episodes=config.n_eval_episodes,
+        eval_window=config.eval_window,
+        eval_seed=config.eval_seed,
+        eval_log_path=eval_log_path,
         log_device=config.log_device,
         log_progress=config.log_progress,
     )
@@ -50,15 +69,10 @@ def build_config(args: argparse.Namespace) -> TrainingConfig:
 
 def main() -> None:
     args = parse_args()
-    config = build_config(args)
+    plot_path = resolve_plot_path(args)
+    eval_log_path = derive_eval_log_path(plot_path)
+    config = build_config(args, eval_log_path=eval_log_path)
     result = run_training(config)
-
-    if args.plot_path is not None:
-        plot_path = args.plot_path
-    elif args.profile == "quick":
-        plot_path = "artifacts/quick_reward.png"
-    else:
-        plot_path = "artifacts/full_reward.png"
 
     save_reward_plot(
         result.eval_timesteps,
@@ -73,6 +87,7 @@ def main() -> None:
     last_reward = result.eval_reward_smoothed[-1] if result.eval_reward_smoothed else 0.0
     print(f"Elapsed: {result.elapsed_sec:.4f}s")
     print(f"Last smoothed eval reward: {last_reward:.4f}")
+    print(f"Eval log saved to: {eval_log_path}")
     print(f"Plot saved to: {plot_path}")
 
 
